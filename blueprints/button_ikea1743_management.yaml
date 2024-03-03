@@ -1,0 +1,249 @@
+blueprint:
+  name: HVP - IKEA E1743 Button Manager with Cover and Roller Control
+  description: "# HVP - IKEA E1743 Button Manager with Cover and Roller Control\n\n
+    Allows custom actions associated to each button On & Off, Short & Long Press triggered by the provided IKEA E1743
+    TRÅDFRI.\n
+    Designed for Zigbee2MQTT.\n\nAutomations created with love and available on my [github](https://github.com/HVPereira/HVP-HA-Blueprints)\n"
+  domain: automation
+  input:
+    button:
+      name: Button
+      description: IKEA Button E1743
+      selector:
+        entity:
+          domain:
+          - sensor
+          multiple: false
+    roller:
+      name: Roller
+      description: Controlled Roller
+      selector:
+        entity:
+          filter:
+            domain: cover
+          multiple: true
+    cover:
+      name: Cover
+      description: Controlled Cover
+      selector:
+        entity:
+          filter:
+            domain: cover
+          multiple: true
+    custom_action_when_up_short:
+      name: Short Press On Custom Action instead of Cover control
+      description: Select if you want a custom action to be executed when the Short Press of the On Button is pressed.
+      default: false
+      selector:
+        boolean:
+    up_short:
+      name: Short Press - On Button
+      description: The action to perform on Short Press of the On Button
+      selector:
+        action:
+      default: []
+    custom_action_when_down_short:
+      name: Short Press Off Custom Action instead of Cover control
+      description: Select if you want a custom action to be executed when the Short Press of the Off Button is pressed.
+      default: false
+      selector:
+        boolean:
+    down_short:
+      name: Short Press - Off Button
+      description: The action to perform on Short Press of the Off Button
+      selector:
+        action:
+      default: []
+    custom_action_when_up_long:
+      name: Long Press On Custom Action instead of Roller control
+      description: Select if you want a custom action to be executed when the Long Press of the On Button is pressed.
+      default: false
+      selector:
+        boolean:
+    up_long:
+      name: Long Press - On Button
+      description: The action to perform on Long Press of the On Button
+      selector:
+        action:
+      default: []
+    custom_action_when_down_long:
+      name: Long Press Off Custom Action instead of Cover control
+      description: Select if you want a custom action to be executed when the Long Press of the Off Button is pressed.
+      default: false
+      selector:
+        boolean:
+    down_long:
+      name: Long Press - Off Button
+      description: The action to perform on Long Press of the Off Button
+      selector:
+        action:
+      default: []
+mode: parallel
+max: 10
+trigger:
+  - platform: state
+    entity_id:
+      - !input button
+    to: "on"
+    id: "on"
+  - platform: state
+    entity_id:
+      - !input button
+    to: "off"
+    id: "off"
+  - platform: state
+    entity_id:
+      - !input button
+    to: brightness_move_up
+    id: move_up
+  - platform: state
+    entity_id:
+      - !input button
+    to: brightness_move_down
+    id: move_down
+variables:
+  cover_entity: !input cover
+  roller_entity: !input roller
+  custom_action_when_up_short: !input custom_action_when_up_short
+  custom_action_when_down_short: !input custom_action_when_down_short
+  custom_action_when_up_long: !input custom_action_when_up_long
+  custom_action_when_down_long: !input custom_action_when_down_long
+condition: []
+action:
+
+# Up Short Press
+
+  - choose:
+    - conditions:
+        - condition: trigger
+          id: "on"
+        - condition: template
+          value_template: "{{ custom_action_when_up_short }}"
+      sequence: !input up_short
+    - conditions:
+        - condition: trigger
+          id: "on"
+        - condition: template
+          value_template: "{{ not custom_action_when_up_short }}"
+      sequence:
+        - if:
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: !input roller
+                  state: closing
+                - condition: state
+                  entity_id: !input roller
+                  state: opening
+          then:
+            - service: cover.stop_cover
+              target: 
+                entity_id: !input roller
+              data: {}
+          else:
+            - service: cover.open_cover
+              target: 
+                entity_id: !input roller
+              data: {}
+
+# Down Short Press
+
+    - conditions:
+        - condition: trigger
+          id: "off"
+        - condition: template
+          value_template: "{{ custom_action_when_down_short }}"
+      sequence: !input down_short
+    - conditions:
+        - condition: trigger
+          id: "off"
+        - condition: template
+          value_template: "{{ not custom_action_when_down_short }}"
+      sequence:
+        - if:
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: !input roller
+                  state: closing
+                - condition: state
+                  entity_id: !input roller
+                  state: opening
+          then:
+            - service: cover.stop_cover
+              target: 
+                entity_id: !input roller
+              data: {}
+          else:
+            - service: cover.close_cover
+              target: 
+                entity_id: !input roller
+              data: {}
+
+# Up Long Press
+
+    - conditions:
+        - condition: trigger
+          id: "move_up"
+        - condition: template
+          value_template: "{{ custom_action_when_up_long }}"
+      sequence: !input up_long
+    - conditions:
+        - condition: trigger
+          id: "move_up"
+        - condition: template
+          value_template: "{{ not custom_action_when_up_long }}"
+      sequence:
+        - if:
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: !input cover
+                  state: closing
+                - condition: state
+                  entity_id: !input cover
+                  state: opening
+          then:
+            - service: cover.stop_cover
+              target: 
+                entity_id: !input cover
+              data: {}
+          else:
+            - service: cover.open_cover
+              target: 
+                entity_id: !input cover
+              data: {}
+
+# Down Long Press
+
+    - conditions:
+        - condition: trigger
+          id: "move_down"
+        - condition: template
+          value_template: "{{ custom_action_when_down_long }}"
+      sequence: !input down_long
+    - conditions:
+        - condition: trigger
+          id: "move_down"
+        - condition: template
+          value_template: "{{ not custom_action_when_down_long }}"
+      sequence:
+        - if:
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: !input cover
+                  state: closing
+                - condition: state
+                  entity_id: !input cover
+                  state: opening
+          then:
+            - service: cover.stop_cover
+              target: 
+                entity_id: !input cover
+              data: {}
+          else:
+            - service: cover.close_cover
+              target: 
+                entity_id: !input cover
+              data: {}
