@@ -1,0 +1,203 @@
+blueprint:
+  name: HVP - Air Quality Management using Air Purifiers
+  description: "# HVP - Air Quality Management using Air Purifiers\n\n
+    Allows the control the air quality in your house. All the details and entries are self explanatory\n
+    Designed for Xiaomi Smart Air Purifier .\n\nAutomations created with love and available on my [github](https://github.com/HVPereira/HVP-HA-Blueprints)\n"
+  domain: automation
+  input:
+    motion_entity:
+      name: Motion Sensor
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: motion
+    stop_when_motion:
+      name: Stop if Motion Detected
+      description: Select if you want the dehumidifier to be off during one hour after motion is detected
+      default: false
+      selector:
+        boolean:
+    fan_entity:
+      name: Fan
+      description: Select the Air purifier to control!!!! :)
+      selector:
+        entity:
+          domain: fan
+    pm_sensor_entity:
+      name: PM Sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: pm25
+    high_pm:
+      name: Highest value of PM
+      description: Considered an unacceptable air quality that will turn the air purifier on
+      default: 20
+      selector:
+        number:
+          min: 10
+          max: 100
+    time_off_entity:
+      name: Time to Stop controlling air quality
+      selector:
+        time:
+    time_on_entity:
+      name: Time to Start controlling air quality
+      selector:
+        time:        
+    prohibited_mode:
+      name: Prohibited Mode
+      description: Do you have any mode that should prevent the dehumidifier to turn on? If so use this selector
+      default:
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+mode: parallel
+max: 10
+trigger_variables:
+  prohibited_mode_trigger: !input prohibited_mode
+variables:
+  prohibited_mode: !input prohibited_mode
+  stop_when_motion: !input stop_when_motion
+trigger:
+  - platform: state
+    entity_id:
+      - !input motion_entity
+    from: "off"
+    to: "on"
+    id: Presence
+  - platform: state
+    entity_id:
+      - !input motion_entity
+    to: 'off'
+    for: '01:00:00'
+    id: Check if Start again
+  - platform: numeric_state
+    entity_id: !input pm_sensor_entity
+    above: !input high_pm
+    id: PM High
+  - platform: numeric_state
+    entity_id: !input pm_sensor_entity
+    below: !input high_pm
+    id: PM Low
+  - platform: time
+    at: !input time_off_entity
+    id: Purifier Time Off
+  - platform: time
+    at: !input time_on_entity
+    id: Purifier Time On
+  - platform: template
+    value_template: "{{ is_state(prohibited_mode_trigger, 'on') }}"
+    id: Prohibited On
+condition: []
+action:
+  - choose:
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id: Check if Start again
+              - condition: time
+                before: !input time_off_entity
+                after: !input time_on_entity
+                weekday:
+                  - mon
+                  - tue
+                  - wed
+                  - thu
+                  - fri
+                  - sat
+                  - sun
+              - condition: template
+                value_template: "{{ stop_when_motion }}"
+              - condition: numeric_state
+                entity_id: !input pm_sensor_entity
+                above: !input high_pm
+              - condition: template
+                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+            alias: Presence Stop if required
+        sequence:
+          - service: fan.turn_on
+            data: {}
+            entity_id: !input fan_entity
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id: Presence
+              - condition: time
+                before: !input time_off_entity
+                after: !input time_on_entity
+                weekday:
+                  - mon
+                  - tue
+                  - wed
+                  - thu
+                  - fri
+                  - sat
+                  - sun
+              - condition: template
+                value_template: "{{ stop_when_motion }}"
+            alias: Presence Stop if required
+        sequence:
+          - service: fan.turn_off
+            data: {}
+            entity_id: !input fan_entity
+      - conditions:
+          - condition: trigger
+            id: PM Low
+            alias: PM Low
+        sequence:
+          - service: fan.turn_off
+            data: {}
+            entity_id: !input fan_entity
+      - conditions:
+          - condition: trigger
+            id: Purifier Time Off
+            alias: Dehumidifier time to turn off
+        sequence:
+          - service: fan.turn_off
+            data: {}
+            entity_id: !input fan_entity
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: time
+                after: !input time_on_entity
+                before: !input time_off_entity
+              - condition: trigger
+                id: PM High
+                alias: Humidity So High
+              - condition: template
+                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+        sequence:
+          - service: fan.turn_on
+            data: {}
+            entity_id: !input fan_entity
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id: Purifier Time On
+              - condition: numeric_state
+                entity_id: !input pm_sensor_entity
+                above: !input high_pm
+              - condition: template
+                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+        sequence:
+          - service: fan.turn_on
+            data: {}
+            entity_id: !input fan_entity
+      - conditions:
+          - alias: It's Prohibited
+            condition: or
+            conditions:
+              - condition: trigger
+                id:
+                  - Prohibited On
+        sequence:
+          - service: fan.turn_off
+            target:
+              entity_id: !input fan_entity
+            data: {}
