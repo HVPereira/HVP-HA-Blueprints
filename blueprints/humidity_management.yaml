@@ -68,7 +68,7 @@ blueprint:
     prohibited_mode:
       name: Prohibited Mode
       description: Do you have any mode that should prevent the dehumidifier to turn on? If so use this selector
-      default:
+      default: ""
       selector:
         entity:
           filter:
@@ -84,7 +84,6 @@ blueprint:
     display_text:
       name: Display Text
       description: Text for the Alexa Notification
-
 mode: parallel
 max: 10
 trigger_variables:
@@ -110,10 +109,14 @@ trigger:
   - platform: numeric_state
     entity_id: !input humidity_sensor_entity
     below: !input low_humidity
+    for:
+      minutes: 2
     id: Humidity Low
   - platform: numeric_state
     entity_id: !input humidity_sensor_entity
     above: !input high_humidity
+    for:
+      minutes: 2
     id: Humidity High
   - platform: time
     at: !input time_off_entity
@@ -128,7 +131,7 @@ trigger:
     to: "on"
     id: Tank Full
   - platform: template
-    value_template: "{{ is_state(prohibited_mode_trigger, 'on') }}"
+    value_template: "{{ prohibited_mode_trigger is not none and is_state(prohibited_mode_trigger, 'on') }}"
     id: Prohibited On
 condition: []
 action:
