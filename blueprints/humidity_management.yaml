@@ -159,7 +159,7 @@ action:
                 above: !input high_humidity
               - condition: template
                 value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
-            alias: Presence Stop if required
+            alias: Presence Stop if required - High Humidity
         sequence:
           - service: humidifier.turn_on
             data: {}
@@ -182,7 +182,12 @@ action:
                   - sun
               - condition: template
                 value_template: "{{ stop_when_motion }}"
-            alias: Presence Stop if required
+              - condition: numeric_state
+                entity_id: !input humidity_sensor_entity
+                below: !input low_humidity
+              - condition: template
+                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+            alias: Presence Stop if required - Low Humidity
         sequence:
           - service: humidifier.turn_off
             data: {}
@@ -223,16 +228,21 @@ action:
               milliseconds: 0
       - conditions:
           - condition: trigger
-            id: Humidity High
-            alias: Humidity Low
+            id: Humidity Time Off
+            alias: Dehumidifier time to turn off
         sequence:
           - service: humidifier.turn_off
             data: {}
             entity_id: !input humidifier_entity
       - conditions:
-          - condition: trigger
-            id: Humidity Time Off
-            alias: Dehumidifier time to turn off
+          - condition: and
+            conditions:
+              - condition: time
+                after: !input time_on_entity
+                before: !input time_off_entity
+              - condition: trigger
+                id: Humidity Low
+                alias: Humidity Low
         sequence:
           - service: humidifier.turn_off
             data: {}
