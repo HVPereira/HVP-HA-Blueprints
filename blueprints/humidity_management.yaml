@@ -139,8 +139,12 @@ action:
       - conditions:
           - condition: and
             conditions:
-              - condition: trigger
-                id: Check if Start again
+              - condition: or
+                conditions:
+                  - condition: trigger
+                    id: Presence
+                  - condition: trigger
+                    id: Check if Start again
               - condition: time
                 before: !input time_off_entity
                 after: !input time_on_entity
@@ -159,7 +163,7 @@ action:
                 above: !input high_humidity
               - condition: template
                 value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
-            alias: Presence Stop if required - High Humidity
+            alias: Presence Start if required - High Humidity
         sequence:
           - service: humidifier.turn_on
             data: {}
@@ -167,8 +171,12 @@ action:
       - conditions:
           - condition: and
             conditions:
-              - condition: trigger
-                id: Presence
+              - condition: or
+                conditions:
+                  - condition: trigger
+                    id: Presence
+                  - condition: trigger
+                    id: Check if Start again
               - condition: time
                 before: !input time_off_entity
                 after: !input time_on_entity
@@ -213,7 +221,7 @@ action:
                 state: "on"
               - condition: template
                 value_template: "{{ no_notification_mode == none or is_state(no_notification_mode, 'off') }}"
-            alias: Presence
+            alias: Notification
         sequence:
           - service: notify.alexa_media
             data:
@@ -227,9 +235,27 @@ action:
               seconds: 0
               milliseconds: 0
       - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id: Humidity Time On
+              - condition: numeric_state
+                entity_id: !input humidity_sensor_entity
+                above: !input high_humidity
+              - condition: state
+                entity_id: !input tank_full_entity
+                state: "off"
+              - condition: template
+                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+            alias: Dehumidifier time to turn on?
+        sequence:
+          - service: humidifier.turn_on
+            data: {}
+            entity_id: !input humidifier_entity
+      - conditions:
           - condition: trigger
             id: Humidity Time Off
-            alias: Dehumidifier time to turn off
+            alias: Dehumidifier time to turn off?
         sequence:
           - service: humidifier.turn_off
             data: {}
@@ -242,7 +268,7 @@ action:
                 before: !input time_off_entity
               - condition: trigger
                 id: Humidity Low
-                alias: Humidity Low
+            alias: Humidity Low Management - triggered by sensor
         sequence:
           - service: humidifier.turn_off
             data: {}
@@ -261,23 +287,7 @@ action:
                 state: "off"
               - condition: template
                 value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
-        sequence:
-          - service: humidifier.turn_on
-            data: {}
-            entity_id: !input humidifier_entity
-      - conditions:
-          - condition: and
-            conditions:
-              - condition: trigger
-                id: Humidity Time On
-              - condition: numeric_state
-                entity_id: !input humidity_sensor_entity
-                above: !input high_humidity
-              - condition: state
-                entity_id: !input tank_full_entity
-                state: "off"
-              - condition: template
-                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+            alias: Humidity High Management - triggered by sensor
         sequence:
           - service: humidifier.turn_on
             data: {}
