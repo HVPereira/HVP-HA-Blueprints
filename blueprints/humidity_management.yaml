@@ -137,34 +137,30 @@ condition: []
 action:
   - choose:
       - conditions:
-          - condition: or
+          - condition: and
             conditions:
-              - condition: and
+              - condition: or
                 conditions:
-                  - condition: or
-                    conditions:
-                      - condition: trigger
-                        id: Presence
-                      - condition: trigger
-                        id: Check if Start again
-                  - condition: time
-                    before: !input time_off_entity
-                    after: !input time_on_entity
-                    weekday:
-                      - mon
-                      - tue
-                      - wed
-                      - thu
-                      - fri
-                      - sat
-                      - sun
-                  - condition: numeric_state
-                    entity_id: !input humidity_sensor_entity
-                    above: !input high_humidity
-                  - condition: template
-                    value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+                  - condition: trigger
+                    id: Presence
+                  - condition: trigger
+                    id: Check if Start again
+              - condition: time
+                before: !input time_off_entity
+                after: !input time_on_entity
+                weekday:
+                  - mon
+                  - tue
+                  - wed
+                  - thu
+                  - fri
+                  - sat
+                  - sun
+              - condition: numeric_state
+                entity_id: !input humidity_sensor_entity
+                above: !input high_humidity
               - condition: template
-                value_template: "{{ not stop_when_motion }}"
+                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
             alias: Presence Start if required - High Humidity
         sequence:
           - service: humidifier.turn_on
