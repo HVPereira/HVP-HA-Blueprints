@@ -137,64 +137,68 @@ condition: []
 action:
   - choose:
       - conditions:
-          - condition: and
+          - condition: or
             conditions:
-              - condition: or
+              - condition: and
                 conditions:
-                  - condition: trigger
-                    id: Presence
-                  - condition: trigger
-                    id: Check if Start again
-              - condition: time
-                before: !input time_off_entity
-                after: !input time_on_entity
-                weekday:
-                  - mon
-                  - tue
-                  - wed
-                  - thu
-                  - fri
-                  - sat
-                  - sun
+                  - condition: or
+                    conditions:
+                      - condition: trigger
+                        id: Presence
+                      - condition: trigger
+                        id: Check if Start again
+                  - condition: time
+                    before: !input time_off_entity
+                    after: !input time_on_entity
+                    weekday:
+                      - mon
+                      - tue
+                      - wed
+                      - thu
+                      - fri
+                      - sat
+                      - sun
+                  - condition: numeric_state
+                    entity_id: !input humidity_sensor_entity
+                    above: !input high_humidity
+                  - condition: template
+                    value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
               - condition: template
-                value_template: "{{ stop_when_motion }}"
-              - condition: numeric_state
-                entity_id: !input humidity_sensor_entity
-                above: !input high_humidity
-              - condition: template
-                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+                value_template: "{{ not stop_when_motion }}"
             alias: Presence Start if required - High Humidity
         sequence:
           - service: humidifier.turn_on
             data: {}
             entity_id: !input humidifier_entity
       - conditions:
-          - condition: and
+          - condition: or
             conditions:
-              - condition: or
+              - condition: and
                 conditions:
-                  - condition: trigger
-                    id: Presence
-                  - condition: trigger
-                    id: Check if Start again
-              - condition: time
-                before: !input time_off_entity
-                after: !input time_on_entity
-                weekday:
-                  - mon
-                  - tue
-                  - wed
-                  - thu
-                  - fri
-                  - sat
-                  - sun
+                  - condition: or
+                    conditions:
+                      - condition: trigger
+                        id: Presence
+                      - condition: trigger
+                        id: Check if Start again
+                  - condition: time
+                    before: !input time_off_entity
+                    after: !input time_on_entity
+                    weekday:
+                      - mon
+                      - tue
+                      - wed
+                      - thu
+                      - fri
+                      - sat
+                      - sun
+                  - condition: numeric_state
+                    entity_id: !input humidity_sensor_entity
+                    below: !input low_humidity
+                  - condition: template
+                    value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
               - condition: template
-                value_template: "{{ stop_when_motion }}"
-              - condition: numeric_state
-                entity_id: !input humidity_sensor_entity
-                below: !input low_humidity
-              - condition: template
-                value_template: "{{ prohibited_mode == none or is_state(prohibited_mode, 'off') }}"
+                value_template: "{{stop_when_motion }}"
             alias: Presence Stop if required - Low Humidity
         sequence:
           - service: humidifier.turn_off
